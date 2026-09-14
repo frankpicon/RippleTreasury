@@ -1,0 +1,267 @@
+name: event-ticketing
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_ADMIN_PASSWORD:-local_postgres_password}
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./infrastructure/postgres/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [ ticketing ]
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-ticketing}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-ticketing_password}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "-q", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    networks: [ ticketing ]
+
+  redis:
+    image: redis:7.4-alpine
+    command: redis-server --appendonly yes
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks: [ ticketing ]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.1.4
+    command: start-dev --import-realm
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-localadmin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-localadmin_password}
+      KC_HTTP_RELATIVE_PATH: /identity
+      KC_HOSTNAME: http://localhost:8080/identity
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_PROXY_HEADERS: xforwarded
+      KC_HEALTH_ENABLED: "true"
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./infrastructure/keycloak/ticketing-realm.json:/opt/keycloak/data/import/ticketing-realm.json:ro
+    networks: [ ticketing ]
+
+  seq:
+    image: datalust/seq:2024.3
+    environment:
+      ACCEPT_EULA: Y
+    ports:
+      - "5341:80"
+    volumes:
+      - seq-data:/data
+    networks: [ ticketing ]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.60
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"
+    networks: [ ticketing ]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.108.0
+    command: [ "--config=/etc/otelcol-contrib/config.yml" ]
+    volumes:
+      - ./infrastructure/otel/otel-collector.yml:/etc/otelcol-contrib/config.yml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+    depends_on:
+      - jaeger
+    networks: [ ticketing ]
+
+  event-catalog:
+    build:
+      context: .
+      dockerfile: src/Services/EventCatalog/EventCatalog.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=event_catalog;Username=event_catalog_user;Password=event_catalog_password
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ticketing}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ticketing_password}
+      Authentication__Authority: http://localhost:8080/identity/realms/ticketing
+      Authentication__InternalAuthority: http://keycloak:8080/identity/realms/ticketing
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5101:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_started }
+      seq: { condition: service_started }
+      otel-collector: { condition: service_started }
+    networks: [ ticketing ]
+
+  ticketing-api:
+    build:
+      context: .
+      dockerfile: src/Services/Ticketing/Ticketing.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=ticketing;Username=ticketing_user;Password=ticketing_password
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ticketing}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ticketing_password}
+      Authentication__Authority: http://localhost:8080/identity/realms/ticketing
+      Authentication__InternalAuthority: http://keycloak:8080/identity/realms/ticketing
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5102:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_started }
+      seq: { condition: service_started }
+      otel-collector: { condition: service_started }
+    networks: [ ticketing ]
+
+  reporting-api:
+    build:
+      context: .
+      dockerfile: src/Services/Reporting/Reporting.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=reporting;Username=reporting_user;Password=reporting_password
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ticketing}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ticketing_password}
+      Authentication__Authority: http://localhost:8080/identity/realms/ticketing
+      Authentication__InternalAuthority: http://keycloak:8080/identity/realms/ticketing
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5103:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_started }
+      seq: { condition: service_started }
+      otel-collector: { condition: service_started }
+    networks: [ ticketing ]
+
+  notifications-worker:
+    build:
+      context: .
+      dockerfile: src/Services/Notifications/Notifications.Worker/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Database: Host=postgres;Port=5432;Database=notifications;Username=notifications_user;Password=notifications_password
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ticketing}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ticketing_password}
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5104:8080"
+    depends_on:
+      postgres: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      seq: { condition: service_started }
+      otel-collector: { condition: service_started }
+    networks: [ ticketing ]
+
+  realtime-api:
+    build:
+      context: .
+      dockerfile: src/Services/Realtime/Realtime.Api/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__Redis: redis:6379,abortConnect=false
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-ticketing}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD:-ticketing_password}
+      Authentication__Authority: http://localhost:8080/identity/realms/ticketing
+      Authentication__InternalAuthority: http://keycloak:8080/identity/realms/ticketing
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "5105:8080"
+    depends_on:
+      redis: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      keycloak: { condition: service_started }
+      seq: { condition: service_started }
+      otel-collector: { condition: service_started }
+    networks: [ ticketing ]
+
+  gateway:
+    build:
+      context: .
+      dockerfile: src/Gateway/EventTicketing.Gateway/Dockerfile
+    environment:
+      ASPNETCORE_URLS: http://+:8080
+      ASPNETCORE_ENVIRONMENT: Development
+      ReverseProxy__Clusters__event-catalog__Destinations__primary__Address: http://event-catalog:8080
+      ReverseProxy__Clusters__ticketing__Destinations__primary__Address: http://ticketing-api:8080
+      ReverseProxy__Clusters__reporting__Destinations__primary__Address: http://reporting-api:8080
+      ReverseProxy__Clusters__realtime__Destinations__primary__Address: http://realtime-api:8080
+      ReverseProxy__Clusters__keycloak__Destinations__primary__Address: http://keycloak:8080
+      Seq__Url: http://seq:80
+      OpenTelemetry__Endpoint: http://otel-collector:4317
+    ports:
+      - "8080:8080"
+    depends_on:
+      - event-catalog
+      - ticketing-api
+      - reporting-api
+      - realtime-api
+      - keycloak
+    networks: [ ticketing ]
+
+  web:
+    build:
+      context: .
+      dockerfile: src/Web/ticketing-web/Dockerfile
+      args:
+        VITE_API_URL: http://localhost:8080
+        VITE_KEYCLOAK_URL: http://localhost:8080/identity
+    ports:
+      - "3000:8080"
+    depends_on:
+      - gateway
+    networks: [ ticketing ]
+
+networks:
+  ticketing:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  seq-data:
+  redis-data:

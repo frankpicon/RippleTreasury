@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <ItemGroup>
+    <PackageReference Include="MassTransit.RabbitMQ" />
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\BuildingBlocks\EventTicketing.Contracts\EventTicketing.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\BuildingBlocks\EventTicketing.ServiceDefaults\EventTicketing.ServiceDefaults.csproj" />
+  </ItemGroup>
+</Project>

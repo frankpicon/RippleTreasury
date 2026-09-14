@@ -1,0 +1,15 @@
+**/bin/
+**/obj/
+**/TestResults/
+**/node_modules/
+**/dist/
+**/*.tsbuildinfo
+.pnpm-store/
+.idea/
+.vs/
+.vscode/
+.env
+*.user
+*.suo
+*.log
+coverage/

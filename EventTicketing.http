@@ -1,0 +1,57 @@
+@gateway = http://localhost:8080
+@keycloak = {{gateway}}/identity/realms/ticketing/protocol/openid-connect/token
+@token = paste-access-token-here
+@eventId = paste-event-id-here
+@tierId = paste-tier-id-here
+
+### Obtain a token (copy access_token into @token)
+POST {{keycloak}}
+Content-Type: application/x-www-form-urlencoded
+
+client_id=ticketing-cli&grant_type=password&username=admin&password=Demo123%21
+
+### List events
+GET {{gateway}}/api/events
+Authorization: Bearer {{token}}
+
+### Create event
+POST {{gateway}}/api/events
+Authorization: Bearer {{token}}
+Content-Type: application/json
+X-Correlation-ID: 11111111-1111-4111-8111-111111111111
+
+{
+  "name": "Architecture Summit",
+  "description": "A local event-driven architecture demonstration.",
+  "venue": "Grand Hall",
+  "startsAtUtc": "2027-08-15T18:30:00Z",
+  "totalCapacity": 100,
+  "pricingTiers": [
+    { "name": "General Admission", "price": 75.00, "capacity": 80 },
+    { "name": "VIP", "price": 150.00, "capacity": 20 }
+  ]
+}
+
+### Availability (allow a moment for EventCreatedV1 projection)
+GET {{gateway}}/api/events/{{eventId}}/availability
+Authorization: Bearer {{token}}
+
+### Remaining inventory for all events (used by the catalog UI)
+GET {{gateway}}/api/events/availability
+Authorization: Bearer {{token}}
+
+### Purchase
+POST {{gateway}}/api/events/{{eventId}}/tickets
+Authorization: Bearer {{token}}
+Idempotency-Key: 22222222-2222-4222-8222-222222222222
+Content-Type: application/json
+
+{
+  "pricingTierId": "{{tierId}}",
+  "customerEmail": "buyer@example.com",
+  "quantity": 2
+}
+
+### Sales summary
+GET {{gateway}}/api/reports/events/{{eventId}}/sales
+Authorization: Bearer {{token}}

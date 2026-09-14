@@ -1,0 +1,78 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTicketing.Contracts", "src\BuildingBlocks\EventTicketing.Contracts\EventTicketing.Contracts.csproj", "{A1010001-1111-4111-8111-111111111111}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTicketing.ServiceDefaults", "src\BuildingBlocks\EventTicketing.ServiceDefaults\EventTicketing.ServiceDefaults.csproj", "{A1010002-2222-4222-8222-222222222222}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventCatalog.Api", "src\Services\EventCatalog\EventCatalog.Api\EventCatalog.Api.csproj", "{A1010003-3333-4333-8333-333333333333}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.Api", "src\Services\Ticketing\Ticketing.Api\Ticketing.Api.csproj", "{A1010004-4444-4444-8444-444444444444}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reporting.Api", "src\Services\Reporting\Reporting.Api\Reporting.Api.csproj", "{A1010005-5555-4555-8555-555555555555}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Notifications.Worker", "src\Services\Notifications\Notifications.Worker\Notifications.Worker.csproj", "{A1010006-6666-4666-8666-666666666666}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventTicketing.Gateway", "src\Gateway\EventTicketing.Gateway\EventTicketing.Gateway.csproj", "{A1010007-7777-4777-8777-777777777777}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Realtime.Api", "src\Services\Realtime\Realtime.Api\Realtime.Api.csproj", "{A1010011-BBBB-4BBB-8BBB-BBBBBBBBBBBB}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventCatalog.UnitTests", "tests\EventCatalog.UnitTests\EventCatalog.UnitTests.csproj", "{A1010008-8888-4888-8888-888888888888}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.UnitTests", "tests\Ticketing.UnitTests\Ticketing.UnitTests.csproj", "{A1010009-9999-4999-8999-999999999999}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.IntegrationTests", "tests\Ticketing.IntegrationTests\Ticketing.IntegrationTests.csproj", "{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A1010001-1111-4111-8111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010001-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010001-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010001-1111-4111-8111-111111111111}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010002-2222-4222-8222-222222222222}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010002-2222-4222-8222-222222222222}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010002-2222-4222-8222-222222222222}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010002-2222-4222-8222-222222222222}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010003-3333-4333-8333-333333333333}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010003-3333-4333-8333-333333333333}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010003-3333-4333-8333-333333333333}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010003-3333-4333-8333-333333333333}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010004-4444-4444-8444-444444444444}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010004-4444-4444-8444-444444444444}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010004-4444-4444-8444-444444444444}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010004-4444-4444-8444-444444444444}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010005-5555-4555-8555-555555555555}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010005-5555-4555-8555-555555555555}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010005-5555-4555-8555-555555555555}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010005-5555-4555-8555-555555555555}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010006-6666-4666-8666-666666666666}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010006-6666-4666-8666-666666666666}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010006-6666-4666-8666-666666666666}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010006-6666-4666-8666-666666666666}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010007-7777-4777-8777-777777777777}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010007-7777-4777-8777-777777777777}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010007-7777-4777-8777-777777777777}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010007-7777-4777-8777-777777777777}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010008-8888-4888-8888-888888888888}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010008-8888-4888-8888-888888888888}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010008-8888-4888-8888-888888888888}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010008-8888-4888-8888-888888888888}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010009-9999-4999-8999-999999999999}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010009-9999-4999-8999-999999999999}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010009-9999-4999-8999-999999999999}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010009-9999-4999-8999-999999999999}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A1010011-BBBB-4BBB-8BBB-BBBBBBBBBBBB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A1010011-BBBB-4BBB-8BBB-BBBBBBBBBBBB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A1010011-BBBB-4BBB-8BBB-BBBBBBBBBBBB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A1010011-BBBB-4BBB-8BBB-BBBBBBBBBBBB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
