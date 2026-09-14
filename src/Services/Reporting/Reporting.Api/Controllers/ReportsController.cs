@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EventTicketing.ServiceDefaults.Errors;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,8 @@ using Reporting.Api.Data;
 namespace Reporting.Api.Controllers;
 
 [ApiController]
-[Route("api/reports/events")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/reports/events")]
 [Authorize(Policy = "report-reader")]
 public sealed class ReportsController(ReportingDbContext db) : ControllerBase
 {

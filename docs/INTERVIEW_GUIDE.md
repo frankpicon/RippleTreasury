@@ -119,3 +119,14 @@ offline interval.
 
 RabbitMQ distributes a projection notification to one Realtime API consumer instance. Redis then fans the
 SignalR notification across every Realtime API replica, so clients connected to different instances all update.
+
+## Explain REST versioning
+
+V1 is the first published REST contract. All clients call explicit `/api/v1` URLs through YARP, and
+the services validate the URL version. Unversioned URLs and V2 currently return 404. For a future breaking
+change, add V2 controllers and contracts while retaining V1 during client migration.
+
+Show `/api/v1/events` returning the documented contract, and demonstrate that Swagger lists only V1
+endpoints. Show unversioned URLs and `/api/v2/events` returning 404.
+REST contract versions, integration message versions, and event record versions solve different problems:
+client compatibility, message compatibility, and concurrent data updates.

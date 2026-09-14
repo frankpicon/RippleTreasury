@@ -27,7 +27,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
 
         var availability = Assert.IsType<AvailabilityResponse>(
             await client.GetFromJsonAsync<AvailabilityResponse>(
-                $"/api/events/{eventId}/availability"));
+                $"/api/v1/events/{eventId}/availability"));
         Assert.Equal(5, availability.TicketsSold);
         Assert.Equal(0, availability.Available);
     }
@@ -56,7 +56,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
 
         var availability = Assert.IsType<AvailabilityResponse>(
             await client.GetFromJsonAsync<AvailabilityResponse>(
-                $"/api/events/{eventId}/availability"));
+                $"/api/v1/events/{eventId}/availability"));
         Assert.Equal(1, availability.TicketsSold);
     }
 
@@ -79,7 +79,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
 
         var availability = Assert.IsType<AvailabilityResponse>(
             await client.GetFromJsonAsync<AvailabilityResponse>(
-                $"/api/events/{eventId}/availability"));
+                $"/api/v1/events/{eventId}/availability"));
         Assert.Equal(1, availability.TicketsSold);
     }
 
@@ -105,7 +105,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
 
             var availability = Assert.IsType<AvailabilityResponse>(
                 await client.GetFromJsonAsync<AvailabilityResponse>(
-                    $"/api/events/{eventId}/availability"));
+                    $"/api/v1/events/{eventId}/availability"));
             Assert.Equal(1, availability.TicketsSold);
         }
         finally
@@ -131,7 +131,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
 
         var summaries = Assert.IsAssignableFrom<IReadOnlyList<InventorySummaryResponse>>(
             await client.GetFromJsonAsync<List<InventorySummaryResponse>>(
-                "/api/events/availability"));
+                "/api/v1/events/availability"));
         var first = Assert.Single(summaries, summary => summary.EventId == firstEventId);
         var second = Assert.Single(summaries, summary => summary.EventId == secondEventId);
 
@@ -184,7 +184,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
         string email,
         string idempotencyKey)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/events/{eventId}/tickets")
+        using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/events/{eventId}/tickets")
         {
             Content = JsonContent.Create(new PurchaseTicketsRequest
             {

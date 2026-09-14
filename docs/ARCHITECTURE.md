@@ -25,6 +25,15 @@ flowchart TD
     RT --> UI
 ```
 
+## REST contract versions
+
+`Asp.Versioning.Mvc` selects V1 from `/api/v{version:apiVersion}/...` routes. Every REST request
+requires an explicit URL version. The UI uses `/api/v1`, and YARP preserves the version when forwarding to
+Event Catalog, Ticketing, or Reporting. Unversioned URLs and unsupported versions return 404.
+The version-aware API explorer publishes only concrete V1 URLs in Swagger.
+A future V2 gets separate controllers and contracts while V1 remains available during client migration.
+REST API versions are independent of the `V1` integration message names and catalog record versions.
+
 ## Service ownership
 
 | Service | Source of truth | Consumes | Publishes |
@@ -111,7 +120,7 @@ introducing a command framework where it is not needed.
 
 The UI treats the Event Catalog's `totalCapacity` as event-definition data and Ticketing's `available` value as
 the authoritative live inventory. The sidebar obtains all remaining counts through one Ticketing batch query,
-`GET /api/events/availability`, instead of issuing one request per event.
+`GET /api/v1/events/availability`, instead of issuing one request per event.
 
 Real-time messages are invalidations, not state-transfer commands. Ticketing publishes
 `InventoryProjectionChangedV1` only after authoritative inventory commits; Reporting publishes

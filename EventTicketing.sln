@@ -24,12 +24,18 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.UnitTests", "test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Ticketing.IntegrationTests", "tests\Ticketing.IntegrationTests\Ticketing.IntegrationTests.csproj", "{A1010010-AAAA-4AAA-8AAA-AAAAAAAAAAAA}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Api.VersioningTests", "tests\Api.VersioningTests\Api.VersioningTests.csproj", "{298E7244-0916-4816-852E-596C34D7FBC4}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{298E7244-0916-4816-852E-596C34D7FBC4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{298E7244-0916-4816-852E-596C34D7FBC4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{298E7244-0916-4816-852E-596C34D7FBC4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{298E7244-0916-4816-852E-596C34D7FBC4}.Release|Any CPU.Build.0 = Release|Any CPU
 		{A1010001-1111-4111-8111-111111111111}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{A1010001-1111-4111-8111-111111111111}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A1010001-1111-4111-8111-111111111111}.Release|Any CPU.ActiveCfg = Release|Any CPU

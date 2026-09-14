@@ -69,7 +69,7 @@ async function purchaseWithRetry(
     if (delay > 0) await wait(delay);
 
     try {
-      return await request<PurchaseResponse>(`/api/events/${eventId}/tickets`, {
+      return await request<PurchaseResponse>(`/api/v1/events/${eventId}/tickets`, {
         method: "POST",
         headers: { "Idempotency-Key": idempotencyKey },
         body: JSON.stringify(body)
@@ -86,14 +86,14 @@ async function purchaseWithRetry(
 }
 
 export const api = {
-  getEvents: () => request<EventModel[]>("/api/events"),
+  getEvents: () => request<EventModel[]>("/api/v1/events"),
   getInventorySummaries: () =>
-    request<InventorySummary[]>("/api/events/availability"),
+    request<InventorySummary[]>("/api/v1/events/availability"),
   getAvailability: (eventId: string) =>
-    request<Availability>(`/api/events/${eventId}/availability`),
+    request<Availability>(`/api/v1/events/${eventId}/availability`),
   getSales: (eventId: string) =>
-    request<SalesSummary>(`/api/reports/events/${eventId}/sales`),
+    request<SalesSummary>(`/api/v1/reports/events/${eventId}/sales`),
   createEvent: (body: object) =>
-    request<EventModel>("/api/events", { method: "POST", body: JSON.stringify(body) }),
+    request<EventModel>("/api/v1/events", { method: "POST", body: JSON.stringify(body) }),
   purchase: purchaseWithRetry
 };

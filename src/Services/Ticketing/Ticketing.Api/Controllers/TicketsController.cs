@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -7,7 +8,8 @@ using Ticketing.Api.Services;
 namespace Ticketing.Api.Controllers;
 
 [ApiController]
-[Route("api/events/{eventId:guid}")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/events/{eventId:guid}")]
 [Authorize]
 public sealed class TicketsController(ITicketPurchaseService service) : ControllerBase
 {
@@ -27,7 +29,7 @@ public sealed class TicketsController(ITicketPurchaseService service) : Controll
             subject, cancellationToken);
         Response.Headers["Idempotency-Replayed"] = result.WasReplayed ? "true" : "false";
         return CreatedAtAction(nameof(GetPurchase),
-            new { eventId, purchaseId = result.Purchase.PurchaseId }, result.Purchase);
+            new { eventId, purchaseId = result.Purchase.PurchaseId, version = HttpContext.GetRequestedApiVersion()!.ToString() }, result.Purchase);
     }
 
     [HttpGet("tickets/{purchaseId:guid}")]

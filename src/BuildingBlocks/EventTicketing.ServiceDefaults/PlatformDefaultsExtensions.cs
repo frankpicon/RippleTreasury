@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EventTicketing.ServiceDefaults.Authentication;
 using EventTicketing.ServiceDefaults.Correlation;
 using EventTicketing.ServiceDefaults.Errors;
@@ -45,15 +46,32 @@ public static class PlatformDefaultsExtensions
             .AllowAnyHeader()
             .AllowAnyMethod()
             .AllowCredentials()
-            .WithExposedHeaders(CorrelationIdMiddleware.HeaderName, "Idempotency-Replayed")));
+            .WithExposedHeaders(CorrelationIdMiddleware.HeaderName, "Idempotency-Replayed", "api-supported-versions", "api-deprecated-versions")));
 
         AddAuthentication(builder);
         builder.Services.AddAuthorization();
 
+        builder.Services.AddApiVersioning(options =>
+        {
+            // Every REST request must carry its version in the URL.
+            options.AssumeDefaultVersionWhenUnspecified = false;
+            options.ApiVersionReader = new UrlSegmentApiVersionReader();
+            options.ReportApiVersions = true;
+        }).AddMvc().AddApiExplorer(options =>
+        {
+            options.GroupNameFormat = "'v'VVV";
+            options.SubstituteApiVersionInUrl = true;
+        });
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen(options =>
         {
-            options.SwaggerDoc("v1", new OpenApiInfo { Title = serviceName, Version = "v1" });
+            options.SwaggerDoc("v1", new OpenApiInfo
+            {
+                Title = serviceName,
+                Version = "v1",
+                Description = "All REST endpoints require /api/v1 routes. Unversioned URLs return 404. " +
+                    "Unsupported URL versions return 404; V2 is not implemented."
+            });
             options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
             {
                 Description = "Paste a Keycloak access token.",

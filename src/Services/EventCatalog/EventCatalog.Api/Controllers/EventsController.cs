@@ -1,3 +1,4 @@
+using Asp.Versioning;
 using EventCatalog.Api.Contracts;
 using EventCatalog.Api.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -6,7 +7,8 @@ using Microsoft.AspNetCore.Mvc;
 namespace EventCatalog.Api.Controllers;
 
 [ApiController]
-[Route("api/events")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/events")]
 [Authorize]
 public sealed class EventsController(IEventCatalogService service) : ControllerBase
 {
@@ -30,7 +32,7 @@ public sealed class EventsController(IEventCatalogService service) : ControllerB
         CancellationToken cancellationToken)
     {
         var created = await service.CreateAsync(request, cancellationToken);
-        return CreatedAtAction(nameof(Get), new { eventId = created.Id }, created);
+        return CreatedAtAction(nameof(Get), new { eventId = created.Id, version = HttpContext.GetRequestedApiVersion()!.ToString() }, created);
     }
 
     [HttpPut("{eventId:guid}")]

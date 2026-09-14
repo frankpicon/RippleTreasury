@@ -252,6 +252,38 @@ docker compose down --volumes
 
 > Removing volumes permanently deletes local EventFlow databases, RabbitMQ state, Redis state, and Seq data.
 
+## REST API versioning
+
+The UI now calls `http://localhost:8080/api/v1/...`. V1 is the only supported REST version.
+All REST clients must specify V1 in the URL. Unversioned `/api/...` URLs return `404`.
+The gateway forwards the version unchanged; each service selects and validates its supported version.
+
+| Capability | Canonical V1 route |
+| --- | --- |
+| List/create events | `/api/v1/events` |
+| Get/update/delete an event | `/api/v1/events/{eventId}` |
+| Purchase tickets | `/api/v1/events/{eventId}/tickets` |
+| Retrieve a purchase | `/api/v1/events/{eventId}/tickets/{purchaseId}` |
+| Event availability | `/api/v1/events/{eventId}/availability` |
+| All-event availability | `/api/v1/events/availability` |
+| Sales summary | `/api/v1/reports/events/{eventId}/sales` |
+
+Only the URL segment selects the REST version; query parameters and headers do not select versions.
+Unsupported URL versions, such as `/api/v2/events`, return `404` rather than falling back to V1.
+The supported version is reported in `api-supported-versions`. Swagger at each API's
+`/swagger` lists only concrete V1 paths. Create responses use canonical versioned
+`Location` links (V1 may be formatted as `v1.0`, which is equivalent to `v1`).
+Identity (`/identity`), SignalR (`/hubs`), health checks, and message contract versions are unchanged.
+
+For a future breaking change, introduce separate `[ApiVersion("2.0")]` controllers and V2 request/response
+contracts using the versioned route template and register a V2 Swagger document.
+Require an explicit URL version for every supported REST contract. Share business services where semantics are unchanged.
+Keep database changes compatible with all active versions, test both contracts, and announce a migration
+and retirement policy before removing V1. No V2 endpoint is implemented yet.
+
+The separate clone does not automatically replace a running Docker stack. To apply these changes locally,
+run `docker compose up --build -d` from this repository; the Compose project name and ports match the original.
+
 ## Build and test
 
 Build the complete .NET solution:
@@ -266,6 +298,26 @@ Run the unit tests:
 dotnet test tests/EventCatalog.UnitTests
 dotnet test tests/Ticketing.UnitTests
 ```
+
+Run HTTP versioning and gateway routing tests (no Docker required):
+
+```powershell
+dotnet test tests/Api.VersioningTests
+```
+
+These tests run real controllers, authorization, version selection, Swagger, and YARP routing in an
+in-process HTTP host. They use service stubs and an in-memory reporting store; database correctness is
+covered by the separate container integration suite.
+
+After rebuilding the Docker services, run the deployed versioning smoke check in PowerShell 7:
+
+```powershell
+pwsh -File scripts/validate-versioning.ps1
+```
+
+It uses the local demo administrator to verify authentication, V1 routes, rejection of unversioned URLs, Swagger,
+resource links, purchases, idempotent retries, inventory, and asynchronous sales projections.
+It creates a temporary event and deletes it afterward; its test purchase remains in the local audit data.
 
 The integration suite starts real PostgreSQL and RabbitMQ containers through Testcontainers, so Docker must
 be running:
@@ -313,14 +365,14 @@ The primary routes exposed through the gateway are:
 
 | Method | Route | Purpose |
 | --- | --- | --- |
-| `GET` | `/api/events` | List events |
-| `POST` | `/api/events` | Create an event |
-| `GET` | `/api/events/{eventId}` | Retrieve an event |
-| `PUT` | `/api/events/{eventId}` | Update an event |
-| `DELETE` | `/api/events/{eventId}?version={version}` | Delete an event |
-| `POST` | `/api/events/{eventId}/tickets` | Purchase tickets |
-| `GET` | `/api/events/{eventId}/availability` | Read authoritative availability |
-| `GET` | `/api/reports/events/{eventId}/sales` | Read the sales summary |
+| `GET` | `/api/v1/events` | List events |
+| `POST` | `/api/v1/events` | Create an event |
+| `GET` | `/api/v1/events/{eventId}` | Retrieve an event |
+| `PUT` | `/api/v1/events/{eventId}` | Update an event |
+| `DELETE` | `/api/v1/events/{eventId}?version={version}` | Delete an event |
+| `POST` | `/api/v1/events/{eventId}/tickets` | Purchase tickets |
+| `GET` | `/api/v1/events/{eventId}/availability` | Read authoritative availability |
+| `GET` | `/api/v1/reports/events/{eventId}/sales` | Read the sales summary |
 
 Purchase requests require an `Idempotency-Key` header. Reusing the key with the same authenticated buyer
 and canonical request returns the original purchase. Reusing it for different purchase semantics returns
