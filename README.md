@@ -104,7 +104,7 @@ Make sure to perform a restart after installation of Docker and WSL
 All commands in this guide run from the directory containing `docker-compose.yml`:
 
 ```powershell
-cd Event_Ticketing_API_Submission-Docker-Messaging
+cd RippleTreasury
 ```
 
 ### 3. Check for port conflicts
