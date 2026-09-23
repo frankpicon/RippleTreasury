@@ -380,9 +380,10 @@ Reusing the key with the same authenticated buyer
 and canonical request returns the original purchase. Reusing it for different purchase semantics returns
 `409 Conflict`.
 
-When updating an event, include each existing pricing tier's `id`, including when renaming it. Omit `id` only
-for new tiers; omitted existing tiers are retired in inventory. Replacing a tier does not increase the event's
-overall remaining capacity. New-event requests must omit tier IDs.
+When updating an event, include every existing pricing tier's `id`, including when renaming it. Omit `id` only
+for new tiers. Event capacity and existing-tier capacity can be increased but cannot be reduced, and existing
+tiers cannot be removed, because Event Catalog does not synchronously query Ticketing's committed sales.
+New-event requests must omit tier IDs.
 
 Database-owning services now use checked-in EF migrations. Development/Testing apply them automatically;
 production requires a separate `--migrate` deployment job. **Existing databases created by `EnsureCreated`
@@ -395,7 +396,8 @@ must be verified and baselined before the first upgrade.** See [database migrati
 - **Safe retries:** a unique idempotency key prevents duplicate purchases.
 - **Reliable publication:** the transactional outbox closes the database/message dual-write gap.
 - **Duplicate protection:** consumer inbox records prevent repeated business effects.
-- **Ordered projections:** catalog versions prevent older event messages from replacing newer state.
+- **Ordered projections:** catalog versions plus event-scoped projection locks prevent older messages from
+  replacing newer state when different consumer queues run concurrently.
 - **Predictable failures:** APIs return appropriate status codes and RFC-style `ProblemDetails`.
 - **Horizontal scale:** stateless APIs coordinate through PostgreSQL, RabbitMQ, and Redis.
 

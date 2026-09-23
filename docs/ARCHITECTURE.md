@@ -84,11 +84,14 @@ capacity - tickets_sold >= requested_quantity
 
 The condition and increment remain one database statement. Purchases and catalog consumers also take the same
 PostgreSQL transaction-scoped advisory lock by event ID before reading inventory. This coordinates event-wide
-capacity, tier replacements, price changes, and eligibility across replicas. Purchases check total sales across
+capacity, tier changes, price changes, and eligibility across replicas. Purchases check total sales across
 all tiers, including retired tiers, against the event capacity. A busy event serializes its inventory writes;
 different events can proceed independently.
 
 Tier updates identify existing tiers by ID, never by their mutable name. Omit the ID only for a new tier.
+Event and existing-tier capacities can be increased but cannot be reduced, and existing tiers cannot be
+removed. Event Catalog cannot know synchronously how many tickets Ticketing has committed, so this monotonic
+capacity policy prevents the catalog definition from falling below sold inventory without coupling the services.
 Purchase requests must include `expectedUnitPrice`; a changed price returns 409 without reserving inventory.
 The browser preserves the accepted price and idempotency key together for retries. An original purchase can
 still be replayed after a later price change. Catalog propagation remains asynchronous: the quote is checked
@@ -143,7 +146,10 @@ Identifiers are client-opaque GUIDs. Catalog versions prevent stale writes and o
 overwriting newer projections.
 Deletion consumers persist inactive versioned records even if the creation message has not arrived, so older
 creation/update messages cannot reactivate a deleted event. Capacity reductions below existing sales preserve
-those sales but leave no remaining event inventory; retired tiers never add new seats to the event.
+those sales for compatibility with previously published messages but leave no remaining event inventory.
+Reporting serializes catalog and purchase projection mutations with the same event-scoped transaction-lock
+pattern, preventing concurrent consumers from replacing a newer catalog version or calculating capacity from
+stale sales.
 
 ## Security model
 

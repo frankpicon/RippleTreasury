@@ -14,6 +14,7 @@ public sealed class TicketsPurchasedConsumer(
     public async Task Consume(ConsumeContext<TicketsPurchasedV1> context)
     {
         var message = context.Message;
+        await db.LockEventAsync(message.EventId, context.CancellationToken);
         var eventRowsUpdated = await db.EventSales
             .Where(item => item.EventId == message.EventId)
             .ExecuteUpdateAsync(update => update

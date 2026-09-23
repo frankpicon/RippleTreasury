@@ -13,6 +13,7 @@ public sealed class EventCreatedConsumer(
 {
     public async Task Consume(ConsumeContext<EventCreatedV1> context)
     {
+        await db.LockEventAsync(context.Message.EventId, context.CancellationToken);
         await SalesProjectionWriter.UpsertEventAsync(db, context.Message.EventId, context.Message.Name,
             context.Message.StartsAtUtc, context.Message.TotalCapacity, context.Message.CatalogVersion,
             context.Message.PricingTiers, context.CancellationToken);
@@ -32,6 +33,7 @@ public sealed class EventUpdatedConsumer(
 {
     public async Task Consume(ConsumeContext<EventUpdatedV1> context)
     {
+        await db.LockEventAsync(context.Message.EventId, context.CancellationToken);
         await SalesProjectionWriter.UpsertEventAsync(db, context.Message.EventId, context.Message.Name,
             context.Message.StartsAtUtc, context.Message.TotalCapacity, context.Message.CatalogVersion,
             context.Message.PricingTiers, context.CancellationToken);
@@ -51,6 +53,7 @@ public sealed class EventDeletedConsumer(
 {
     public async Task Consume(ConsumeContext<EventDeletedV1> context)
     {
+        await db.LockEventAsync(context.Message.EventId, context.CancellationToken);
         var projection = await db.EventSales.Include(item => item.PricingTiers)
             .SingleOrDefaultAsync(item => item.EventId == context.Message.EventId,
                 context.CancellationToken);

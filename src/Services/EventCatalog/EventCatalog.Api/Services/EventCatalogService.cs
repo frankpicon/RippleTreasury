@@ -72,6 +72,8 @@ public sealed class EventCatalogService(
                 $"Event version {request.Version} is stale; the current version is {entity.Version}.");
         }
 
+        ValidateCapacityChange(entity, request);
+
         entity.Name = request.Name.Trim();
         entity.Description = request.Description.Trim();
         entity.Venue = request.Venue.Trim();
@@ -158,6 +160,35 @@ public sealed class EventCatalogService(
             existing.Name = name;
             existing.Price = requestedTier.Price;
             existing.Capacity = requestedTier.Capacity;
+        }
+    }
+
+    internal static void ValidateCapacityChange(EventEntity entity, UpdateEventRequest request)
+    {
+        if (request.TotalCapacity < entity.TotalCapacity)
+        {
+            throw new ResourceConflictException(
+                "Event capacity cannot be reduced after creation because tickets may already be sold.");
+        }
+
+        var requestedById = request.PricingTiers
+            .Where(tier => tier.Id.HasValue)
+            .GroupBy(tier => tier.Id!.Value)
+            .ToDictionary(group => group.Key, group => group.First());
+
+        foreach (var existing in entity.PricingTiers)
+        {
+            if (!requestedById.TryGetValue(existing.Id, out var requested))
+            {
+                throw new ResourceConflictException(
+                    $"Pricing tier '{existing.Name}' cannot be removed because tickets may already be sold.");
+            }
+
+            if (requested.Capacity < existing.Capacity)
+            {
+                throw new ResourceConflictException(
+                    $"Capacity for pricing tier '{existing.Name}' cannot be reduced because tickets may already be sold.");
+            }
         }
     }
 

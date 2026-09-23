@@ -9,6 +9,19 @@ public sealed class ReportingDbContext(DbContextOptions<ReportingDbContext> opti
     public DbSet<EventSalesProjection> EventSales => Set<EventSalesProjection>();
     public DbSet<TierSalesProjection> TierSales => Set<TierSalesProjection>();
 
+    // Catalog and purchase messages use different queues and may be consumed concurrently.
+    // Serialize every projection mutation for one event while allowing different events
+    // to continue in parallel. The EF consumer outbox supplies the surrounding transaction.
+    public Task LockEventAsync(Guid eventId, CancellationToken cancellationToken)
+    {
+        if (Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Reporting projection writes require a transaction.");
+
+        return Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({eventId.ToString()}, 0))",
+            cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<EventSalesProjection>(entity =>
