@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Authentication;
+using MassTransit;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
@@ -35,13 +36,16 @@ public sealed class TicketingFactory : WebApplicationFactory<Program>, IAsyncLif
     {
         builder.UseEnvironment("Testing");
         builder.ConfigureTestServices(services =>
+        {
+            services.Configure<MassTransitHostOptions>(options => options.WaitUntilStarted = true);
             services.AddAuthentication(options =>
                 {
                     options.DefaultAuthenticateScheme = TestAuthenticationHandler.SchemeName;
                     options.DefaultChallengeScheme = TestAuthenticationHandler.SchemeName;
                 })
                 .AddScheme<AuthenticationSchemeOptions, TestAuthenticationHandler>(
-                    TestAuthenticationHandler.SchemeName, _ => { }));
+                    TestAuthenticationHandler.SchemeName, _ => { });
+        });
         builder.ConfigureAppConfiguration((_, configuration) =>
             configuration.AddInMemoryCollection(new Dictionary<string, string?>
             {

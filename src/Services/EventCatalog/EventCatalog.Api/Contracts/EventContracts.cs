@@ -4,6 +4,9 @@ namespace EventCatalog.Api.Contracts;
 
 public sealed class PricingTierRequest
 {
+    // Omit for a new tier; preserve this ID when editing or renaming an existing tier.
+    public Guid? Id { get; init; }
+
     [Required, StringLength(100, MinimumLength = 1)]
     public required string Name { get; init; }
 

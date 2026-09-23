@@ -189,6 +189,7 @@ public sealed class ConcurrentPurchaseTests(TicketingFactory factory) : IClassFi
             Content = JsonContent.Create(new PurchaseTicketsRequest
             {
                 PricingTierId = tierId,
+                ExpectedUnitPrice = 50,
                 CustomerEmail = email,
                 Quantity = 1
             })

@@ -69,7 +69,7 @@ Be candid:
 - The requested exercise could be solved well as a modular monolith in two hours. Microservices add deployment,
   observability, testing, data-consistency, and operational cost.
 - Reporting is intentionally eventually consistent; inventory is strongly consistent inside Ticketing.
-- Local `EnsureCreated` optimizes reviewer setup; production requires migrations.
+- Development/Testing apply checked-in migrations automatically; production requires a separate `--migrate` deployment step.
 - Event changes that conflict with existing sales need a production approval saga or reservation-aware validation.
 - A real notification provider, payment flow, refund/cancellation saga, and HA infrastructure are outside scope.
 

@@ -54,9 +54,19 @@ public sealed class EventDeletedConsumer(
         var projection = await db.EventSales.Include(item => item.PricingTiers)
             .SingleOrDefaultAsync(item => item.EventId == context.Message.EventId,
                 context.CancellationToken);
-        if (projection is null || projection.CatalogVersion >= context.Message.CatalogVersion)
+        if (projection is not null && projection.CatalogVersion >= context.Message.CatalogVersion)
         {
             return;
+        }
+
+        if (projection is null)
+        {
+            projection = new EventSalesProjection
+            {
+                EventId = context.Message.EventId,
+                EventName = "Deleted event"
+            };
+            db.EventSales.Add(projection);
         }
 
         projection.CatalogVersion = context.Message.CatalogVersion;
@@ -145,11 +155,12 @@ internal static class SalesProjectionWriter
             }
 
             var existingIds = projection.PricingTiers.Select(tier => tier.PricingTierId).ToHashSet();
-            projection.PricingTiers.AddRange(incomingTiers
-                .Where(tier => !existingIds.Contains(tier.TierId))
-                .Select(ToProjection));
-            projection.TotalCapacity = projection.PricingTiers.Sum(tier =>
-                tier.IsActive ? tier.Capacity : tier.TicketsSold);
+            foreach (var incoming in incomingTiers.Where(tier => !existingIds.Contains(tier.TierId)))
+            {
+                var added = ToProjection(incoming);
+                projection.PricingTiers.Add(added);
+                db.TierSales.Add(added);
+            }
         }
 
         await db.SaveChangesAsync(cancellationToken);

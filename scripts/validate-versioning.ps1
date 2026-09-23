@@ -41,7 +41,7 @@ try {
     $deadline = [DateTime]::UtcNow.AddSeconds(60)
     do { $available = Request "/api/v1/events/$id/availability"; if ($available.StatusCode -eq 200) { break }; Start-Sleep -Seconds 2 } while ([DateTime]::UtcNow -lt $deadline)
     Check ($available.StatusCode -eq 200) 'RabbitMQ event projection reaches ticketing inventory'
-    $purchaseBody = @{pricingTierId=$event.pricingTiers[0].id;customerEmail='validation@example.com';quantity=2}
+    $purchaseBody = @{pricingTierId=$event.pricingTiers[0].id;expectedUnitPrice=10;customerEmail='validation@example.com';quantity=2}
     $key = @{ 'Idempotency-Key'=[guid]::NewGuid().ToString() }
     $purchase = Request "/api/v1/events/$id/tickets" 'POST' $purchaseBody $key
     Check ($purchase.StatusCode -eq 201) 'V1 purchase returns 201'

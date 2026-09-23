@@ -374,13 +374,23 @@ The primary routes exposed through the gateway are:
 | `GET` | `/api/v1/events/{eventId}/availability` | Read authoritative availability |
 | `GET` | `/api/v1/reports/events/{eventId}/sales` | Read the sales summary |
 
-Purchase requests require an `Idempotency-Key` header. Reusing the key with the same authenticated buyer
+Purchase requests require an `Idempotency-Key` header and `expectedUnitPrice` in the JSON body (use the price
+from availability, including `0` for a free ticket). A changed price returns `409` without reserving tickets.
+Reusing the key with the same authenticated buyer
 and canonical request returns the original purchase. Reusing it for different purchase semantics returns
 `409 Conflict`.
 
+When updating an event, include each existing pricing tier's `id`, including when renaming it. Omit `id` only
+for new tiers; omitted existing tiers are retired in inventory. Replacing a tier does not increase the event's
+overall remaining capacity. New-event requests must omit tier IDs.
+
+Database-owning services now use checked-in EF migrations. Development/Testing apply them automatically;
+production requires a separate `--migrate` deployment job. **Existing databases created by `EnsureCreated`
+must be verified and baselined before the first upgrade.** See [database migration instructions](docs/DATABASE_MIGRATIONS.md).
+
 ## Correctness and reliability
 
-- **No overselling:** a conditional PostgreSQL update atomically checks and reserves inventory.
+- **No overselling:** a conditional tier update and transaction-scoped event lock enforce tier and event capacity.
 - **Atomic purchase:** inventory, purchase, and outbox records commit in one transaction.
 - **Safe retries:** a unique idempotency key prevents duplicate purchases.
 - **Reliable publication:** the transactional outbox closes the database/message dual-write gap.

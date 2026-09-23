@@ -18,6 +18,7 @@ interface Props {
 interface PurchaseAttempt {
   fingerprint: string;
   idempotencyKey: string;
+  request: PurchaseRequest;
 }
 
 export function EventDetails({
@@ -99,15 +100,21 @@ export function EventDetails({
     if (purchaseLocked.current) return;
 
     const form = new FormData(formEvent.currentTarget);
+    const selectedTier = availability?.pricingTiers.find(
+      tier => tier.pricingTierId === String(form.get("tier")));
+    if (!selectedTier) return;
     const request: PurchaseRequest = {
       pricingTierId: String(form.get("tier") ?? ""),
+      expectedUnitPrice: selectedTier.price,
       customerEmail: String(form.get("email") ?? "").trim(),
       quantity: Number(form.get("quantity"))
     };
-    const fingerprint = JSON.stringify({ eventId: event.id, ...request });
+    const fingerprint = JSON.stringify({ eventId: event.id,
+      pricingTierId: request.pricingTierId, customerEmail: request.customerEmail,
+      quantity: request.quantity });
     const attempt = pendingAttempt.current?.fingerprint === fingerprint
       ? pendingAttempt.current
-      : { fingerprint, idempotencyKey: crypto.randomUUID() };
+      : { fingerprint, idempotencyKey: crypto.randomUUID(), request };
 
     pendingAttempt.current = attempt;
     purchaseLocked.current = true;
@@ -116,7 +123,7 @@ export function EventDetails({
     setFeedback("");
 
     try {
-      await api.purchase(event.id, request, attempt.idempotencyKey);
+      await api.purchase(event.id, attempt.request, attempt.idempotencyKey);
       pendingAttempt.current = undefined;
       setPurchaseConfirmed(true);
       setFeedback("Purchase confirmed. Live inventory and reporting updates were published.");
@@ -130,6 +137,8 @@ export function EventDetails({
       } else {
         pendingAttempt.current = undefined;
         setFeedback(caught instanceof Error ? caught.message : "Purchase failed.");
+        if (caught instanceof ApiError && caught.status === 409)
+          await refreshAvailability().catch(() => undefined);
       }
     } finally {
       setPurchasing(false);

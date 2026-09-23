@@ -69,6 +69,7 @@ export interface SalesSummary {
 
 export interface PurchaseRequest {
   pricingTierId: string;
+  expectedUnitPrice: number;
   customerEmail: string;
   quantity: number;
 }

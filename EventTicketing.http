@@ -48,6 +48,7 @@ Content-Type: application/json
 
 {
   "pricingTierId": "{{tierId}}",
+  "expectedUnitPrice": 75.00,
   "customerEmail": "buyer@example.com",
   "quantity": 2
 }

@@ -7,12 +7,16 @@ namespace EventTicketing.ServiceDefaults.Persistence;
 
 public static class DatabaseInitializationExtensions
 {
-    public static async Task EnsureDatabaseAsync<TContext>(
+    public static async Task<bool> InitializeDatabaseAsync<TContext>(
         this IHost host,
+        string[] args,
         CancellationToken cancellationToken = default)
         where TContext : DbContext
     {
         const int maximumAttempts = 10;
+        var migrateOnly = args.Contains("--migrate", StringComparer.Ordinal);
+        var environment = host.Services.GetRequiredService<IHostEnvironment>();
+        var applyMigrations = migrateOnly || environment.IsDevelopment() || environment.IsEnvironment("Testing");
 
         for (var attempt = 1; attempt <= maximumAttempts; attempt++)
         {
@@ -24,11 +28,17 @@ public static class DatabaseInitializationExtensions
             try
             {
                 var context = scope.ServiceProvider.GetRequiredService<TContext>();
-                await context.Database.EnsureCreatedAsync(cancellationToken);
+                if (applyMigrations)
+                    await context.Database.MigrateAsync(cancellationToken);
+                else if ((await context.Database.GetPendingMigrationsAsync(cancellationToken)).Any())
+                    throw new InvalidOperationException(
+                        "Database migrations are pending. Run this service with --migrate as a deployment step.");
                 logger.LogInformation("Database for {DbContext} is ready", typeof(TContext).Name);
-                return;
+                return migrateOnly;
             }
-            catch (Exception exception) when (attempt < maximumAttempts)
+            catch (Exception exception) when (attempt < maximumAttempts &&
+                                              exception is not InvalidOperationException &&
+                                              exception is not OperationCanceledException)
             {
                 logger.LogWarning(exception,
                     "Database initialization attempt {Attempt}/{MaximumAttempts} failed",
@@ -36,5 +46,7 @@ public static class DatabaseInitializationExtensions
                 await Task.Delay(TimeSpan.FromSeconds(2), cancellationToken);
             }
         }
+
+        throw new InvalidOperationException("Database initialization did not complete.");
     }
 }

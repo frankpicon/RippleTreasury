@@ -145,6 +145,10 @@ public static class PlatformDefaultsExtensions
         var enabled = builder.Configuration.GetValue("Authentication:Enabled", true);
         if (!enabled)
         {
+            if (!builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+                throw new InvalidOperationException(
+                    "Authentication may only be disabled in Development or Testing.");
+
             builder.Services.AddAuthentication(DevelopmentAuthenticationHandler.SchemeName)
                 .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions,
                     DevelopmentAuthenticationHandler>(DevelopmentAuthenticationHandler.SchemeName, _ => { });

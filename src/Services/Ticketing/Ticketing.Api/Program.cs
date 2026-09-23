@@ -8,7 +8,7 @@ using Ticketing.Api.Consumers;
 using Ticketing.Api.Data;
 using Ticketing.Api.Services;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--migrate").ToArray());
 builder.AddPlatformDefaults("Ticketing API");
 
 builder.Services.AddControllers();
@@ -63,7 +63,7 @@ builder.Services.AddMassTransit(registration =>
 });
 
 var app = builder.Build();
-await app.EnsureDatabaseAsync<TicketingDbContext>();
+if (await app.InitializeDatabaseAsync<TicketingDbContext>(args)) return;
 app.UsePlatformDefaults();
 app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });

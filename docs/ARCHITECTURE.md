@@ -82,8 +82,17 @@ The reservation statement changes a tier only when:
 capacity - tickets_sold >= requested_quantity
 ```
 
-Because the condition and increment are one database statement, no application lock is required. Application
-locks would protect only one process and would fail after horizontal scaling.
+The condition and increment remain one database statement. Purchases and catalog consumers also take the same
+PostgreSQL transaction-scoped advisory lock by event ID before reading inventory. This coordinates event-wide
+capacity, tier replacements, price changes, and eligibility across replicas. Purchases check total sales across
+all tiers, including retired tiers, against the event capacity. A busy event serializes its inventory writes;
+different events can proceed independently.
+
+Tier updates identify existing tiers by ID, never by their mutable name. Omit the ID only for a new tier.
+Purchase requests must include `expectedUnitPrice`; a changed price returns 409 without reserving inventory.
+The browser preserves the accepted price and idempotency key together for retries. An original purchase can
+still be replayed after a later price change. Catalog propagation remains asynchronous: the quote is checked
+against Ticketing's committed state, not a synchronous cross-service catalog read.
 
 ## Delivery guarantees
 
@@ -132,6 +141,9 @@ net rather than the primary update mechanism.
 Date/time values use UTC `DateTimeOffset`. Money uses fixed-precision PostgreSQL numerics and .NET `decimal`.
 Identifiers are client-opaque GUIDs. Catalog versions prevent stale writes and old integration events from
 overwriting newer projections.
+Deletion consumers persist inactive versioned records even if the creation message has not arrived, so older
+creation/update messages cannot reactivate a deleted event. Capacity reductions below existing sales preserve
+those sales but leave no remaining event inventory; retired tiers never add new seats to the event.
 
 ## Security model
 
@@ -146,8 +158,8 @@ flowchart LR
 ```
 
 The browser never holds a client secret. `event-admin`, `ticket-buyer`, and `report-reader` provide focused
-authorization. Authentication can be disabled only through explicit test configuration, which substitutes a
-test identity; production configuration defaults to enabled. WebSocket transports carry the short-lived bearer
+authorization. Authentication can be disabled explicitly in Development or Testing, which substitutes a
+test identity; other environments reject that configuration at startup. WebSocket transports carry the short-lived bearer
 token in the SignalR connection query string, so informational YARP forwarding logs are suppressed to prevent
 the token-bearing target URI from being written to Seq.
 
@@ -159,7 +171,8 @@ the token-bearing target URI from being written to Seq.
 3. Add PostgreSQL read replicas only where measured read load requires them.
 4. Cluster RabbitMQ with quorum queues and publisher confirms in production.
 5. Scale Realtime API behind the Redis backplane; use a managed SignalR service when connection volume justifies it.
-6. Replace `EnsureCreated` with versioned migrations and deployment gates.
+6. Apply checked-in migrations in a single deployment job before rolling out service replicas; see
+   [database migrations](DATABASE_MIGRATIONS.md) for existing-database baselining and deployment commands.
 7. Apply gateway rate limits, request-size limits, WAF controls, and distributed cache only after observing need.
 8. Define SLOs for purchase success/latency, projection lag, outbox age, error-queue depth, and inventory conflicts.
 

@@ -6,6 +6,9 @@ public sealed class PurchaseTicketsRequest
 {
     public Guid PricingTierId { get; init; }
 
+    [Required, Range(typeof(decimal), "0.00", "1000000.00")]
+    public decimal? ExpectedUnitPrice { get; init; }
+
     [Required, EmailAddress, StringLength(320)]
     public required string CustomerEmail { get; init; }
 

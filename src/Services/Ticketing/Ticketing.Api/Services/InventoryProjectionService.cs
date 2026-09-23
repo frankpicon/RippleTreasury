@@ -19,11 +19,18 @@ public sealed class InventoryProjectionService(
 
     public async Task DeleteAsync(EventDeletedV1 message, CancellationToken cancellationToken)
     {
+        await db.LockEventAsync(message.EventId, cancellationToken);
         var entity = await db.Events.Include(item => item.PricingTiers)
             .SingleOrDefaultAsync(item => item.Id == message.EventId, cancellationToken);
-        if (entity is null || entity.CatalogVersion >= message.CatalogVersion)
+        if (entity is not null && entity.CatalogVersion >= message.CatalogVersion)
         {
             return;
+        }
+
+        if (entity is null)
+        {
+            entity = new InventoryEvent { Id = message.EventId, Name = "Deleted event" };
+            db.Events.Add(entity);
         }
 
         entity.CatalogVersion = message.CatalogVersion;
@@ -45,6 +52,7 @@ public sealed class InventoryProjectionService(
         IReadOnlyList<PricingTierContract> incomingTiers,
         CancellationToken cancellationToken)
     {
+        await db.LockEventAsync(eventId, cancellationToken);
         var entity = await db.Events.Include(item => item.PricingTiers)
             .SingleOrDefaultAsync(item => item.Id == eventId, cancellationToken);
 
@@ -95,11 +103,16 @@ public sealed class InventoryProjectionService(
             }
 
             var existingIds = entity.PricingTiers.Select(tier => tier.Id).ToHashSet();
-            entity.PricingTiers.AddRange(incomingTiers
-                .Where(tier => !existingIds.Contains(tier.TierId))
-                .Select(ToEntity));
-            entity.TotalCapacity = entity.PricingTiers.Sum(tier =>
-                tier.IsActive ? tier.Capacity : tier.TicketsSold);
+            foreach (var incoming in incomingTiers.Where(tier => !existingIds.Contains(tier.TierId)))
+            {
+                var added = ToEntity(incoming);
+                entity.PricingTiers.Add(added);
+                // IDs come from Catalog. Explicitly insert rather than letting EF infer an existing row.
+                db.PricingTiers.Add(added);
+            }
+            // Retired tiers retain their sales, but do not add seats to the event.
+            entity.TotalCapacity = Math.Max(requestedTotalCapacity,
+                entity.PricingTiers.Sum(tier => tier.TicketsSold));
         }
 
         await db.SaveChangesAsync(cancellationToken);

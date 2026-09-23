@@ -10,6 +10,17 @@ public sealed class TicketingDbContext(DbContextOptions<TicketingDbContext> opti
     public DbSet<InventoryTier> PricingTiers => Set<InventoryTier>();
     public DbSet<TicketPurchase> TicketPurchases => Set<TicketPurchase>();
 
+    // Shared by HTTP purchases and catalog consumers, including events not created yet.
+    // The transaction-scoped database lock works across service replicas.
+    public Task LockEventAsync(Guid eventId, CancellationToken cancellationToken)
+    {
+        if (Database.CurrentTransaction is null)
+            throw new InvalidOperationException("Inventory writes require a transaction.");
+        return Database.ExecuteSqlInterpolatedAsync(
+            $"SELECT pg_advisory_xact_lock(hashtextextended({eventId.ToString()}, 0))",
+            cancellationToken);
+    }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<InventoryEvent>(entity =>

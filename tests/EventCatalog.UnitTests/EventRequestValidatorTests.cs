@@ -61,7 +61,7 @@ public sealed class EventRequestValidatorTests
 
         EventCatalogService.ReconcilePricingTiers(tiers,
         [
-            new PricingTierRequest { Name = "GENERAL", Price = 60, Capacity = 120 }
+            new PricingTierRequest { Id = tierId, Name = "GENERAL", Price = 60, Capacity = 120 }
         ]);
 
         var tier = Assert.Single(tiers);

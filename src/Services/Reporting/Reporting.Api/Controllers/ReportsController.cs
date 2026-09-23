@@ -25,10 +25,12 @@ public sealed class ReportsController(ReportingDbContext db) : ControllerBase
             .SingleOrDefaultAsync(item => item.EventId == eventId, cancellationToken)
             ?? throw new ResourceNotFoundException($"Sales report for event '{eventId}' was not found.");
 
+        var remaining = projection.IsActive
+            ? Math.Max(0, projection.TotalCapacity - projection.TicketsSold) : 0;
         var tiers = projection.PricingTiers.OrderBy(item => item.Name)
             .Select(item => new TierSalesResponse(
                 item.PricingTierId, item.Name, item.Capacity, item.TicketsSold,
-                item.IsActive ? Math.Max(0, item.Capacity - item.TicketsSold) : 0,
+                item.IsActive ? Math.Min(remaining, Math.Max(0, item.Capacity - item.TicketsSold)) : 0,
                 item.GrossRevenue, item.IsActive))
             .ToList();
 
@@ -38,7 +40,7 @@ public sealed class ReportsController(ReportingDbContext db) : ControllerBase
             projection.StartsAtUtc,
             projection.TotalCapacity,
             projection.TicketsSold,
-            Math.Max(0, projection.TotalCapacity - projection.TicketsSold),
+            Math.Min(remaining, tiers.Sum(tier => tier.Available)),
             projection.GrossRevenue,
             projection.IsActive,
             tiers));

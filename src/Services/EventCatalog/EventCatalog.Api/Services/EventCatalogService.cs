@@ -33,6 +33,9 @@ public sealed class EventCatalogService(
         var now = timeProvider.GetUtcNow();
         EventRequestValidator.Validate(request, now);
 
+        if (request.PricingTiers.Any(tier => tier.Id.HasValue))
+            throw new RequestValidationException("New events must not supply pricing-tier IDs.");
+
         var entity = new EventEntity
         {
             Id = Guid.NewGuid(),
@@ -77,7 +80,9 @@ public sealed class EventCatalogService(
         entity.Version++;
         entity.UpdatedAtUtc = now;
 
+        var existingTierIds = entity.PricingTiers.Select(tier => tier.Id).ToHashSet();
         ReconcilePricingTiers(entity.PricingTiers, request.PricingTiers);
+        db.PricingTiers.AddRange(entity.PricingTiers.Where(tier => !existingTierIds.Contains(tier.Id)));
 
         var message = ToUpdatedMessage(entity, correlationContext.CorrelationId, now);
         await publisher.Publish(message, context => context.CorrelationId = message.CorrelationId,
@@ -125,17 +130,18 @@ public sealed class EventCatalogService(
         IEnumerable<PricingTierRequest> requestedTiers)
     {
         var requested = requestedTiers.ToList();
-        var requestedNames = requested
-            .Select(tier => tier.Name.Trim())
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var requestedIds = requested.Where(tier => tier.Id.HasValue)
+            .Select(tier => tier.Id!.Value).ToHashSet();
+        if (requestedIds.Count != requested.Count(tier => tier.Id.HasValue) ||
+            requestedIds.Any(id => existingTiers.All(tier => tier.Id != id)))
+            throw new RequestValidationException("Pricing-tier IDs must be unique and belong to this event.");
 
-        existingTiers.RemoveAll(tier => !requestedNames.Contains(tier.Name));
+        existingTiers.RemoveAll(tier => !requestedIds.Contains(tier.Id));
 
         foreach (var requestedTier in requested)
         {
             var name = requestedTier.Name.Trim();
-            var existing = existingTiers.SingleOrDefault(tier =>
-                string.Equals(tier.Name, name, StringComparison.OrdinalIgnoreCase));
+            var existing = existingTiers.SingleOrDefault(tier => tier.Id == requestedTier.Id);
 
             if (existing is null)
             {

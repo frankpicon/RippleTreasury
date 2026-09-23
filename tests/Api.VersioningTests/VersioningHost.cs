@@ -31,6 +31,7 @@ public sealed class VersioningHost : IAsyncLifetime
     public async Task InitializeAsync()
     {
         var builder = WebApplication.CreateBuilder();
+        builder.Environment.EnvironmentName = "Testing";
         builder.WebHost.UseTestServer();
         builder.Configuration["Authentication:Enabled"] = "false";
         builder.AddPlatformDefaults("API compatibility tests");

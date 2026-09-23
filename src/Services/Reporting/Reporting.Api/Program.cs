@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 using Reporting.Api.Consumers;
 using Reporting.Api.Data;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--migrate").ToArray());
 builder.AddPlatformDefaults("Reporting API");
 
 builder.Services.AddControllers();
@@ -55,7 +55,7 @@ builder.Services.AddMassTransit(registration =>
 });
 
 var app = builder.Build();
-await app.EnsureDatabaseAsync<ReportingDbContext>();
+if (await app.InitializeDatabaseAsync<ReportingDbContext>(args)) return;
 app.UsePlatformDefaults();
 app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });

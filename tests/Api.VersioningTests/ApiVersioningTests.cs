@@ -71,7 +71,13 @@ public sealed class ApiVersioningTests(VersioningHost host) : IClassFixture<Vers
         using var anonymous = await host.Client.SendAsync(Request(HttpMethod.Get, prefix + "/events", null));
         Assert.Equal(HttpStatusCode.Unauthorized, anonymous.StatusCode);
         using var purchase = Request(HttpMethod.Post, prefix + "/events/{eventId}/tickets", "report-reader");
-        purchase.Content = JsonContent.Create(new { pricingTierId = VersioningHost.TierId, quantity = 1, customerEmail = "buyer@example.com" });
+        purchase.Content = JsonContent.Create(new
+        {
+            pricingTierId = VersioningHost.TierId,
+            expectedUnitPrice = 10,
+            quantity = 1,
+            customerEmail = "buyer@example.com"
+        });
         using var forbidden = await host.Client.SendAsync(purchase);
         Assert.Equal(HttpStatusCode.Forbidden, forbidden.StatusCode);
         using var report = await host.Client.SendAsync(Request(HttpMethod.Get, prefix + "/reports/events/{eventId}/sales", "ticket-buyer"));
@@ -105,7 +111,13 @@ public sealed class ApiVersioningTests(VersioningHost host) : IClassFixture<Vers
 
         using var purchase = Request(HttpMethod.Post, prefix + "/events/{eventId}/tickets");
         purchase.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
-        purchase.Content = JsonContent.Create(new { pricingTierId = VersioningHost.TierId, quantity = 2, customerEmail = "buyer@example.com" });
+        purchase.Content = JsonContent.Create(new
+        {
+            pricingTierId = VersioningHost.TierId,
+            expectedUnitPrice = 10,
+            quantity = 2,
+            customerEmail = "buyer@example.com"
+        });
         using var purchased = await host.Client.SendAsync(purchase);
         Assert.Equal(HttpStatusCode.Created, purchased.StatusCode);
         Assert.NotNull(purchased.Headers.Location);

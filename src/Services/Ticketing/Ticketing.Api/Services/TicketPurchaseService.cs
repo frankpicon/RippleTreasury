@@ -23,6 +23,11 @@ public sealed class TicketPurchaseService(
         string buyerSubject,
         CancellationToken cancellationToken)
     {
+        if (request.ExpectedUnitPrice is null or < 0)
+            throw new RequestValidationException("ExpectedUnitPrice is required and must be non-negative.");
+
+        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        await db.LockEventAsync(eventId, cancellationToken);
         var existing = await db.TicketPurchases.AsNoTracking()
             .SingleOrDefaultAsync(purchase => purchase.IdempotencyKey == idempotencyKey, cancellationToken);
         if (existing is not null)
@@ -50,7 +55,14 @@ public sealed class TicketPurchaseService(
             throw new ResourceConflictException("The selected pricing tier is inactive.");
         }
 
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+        if (tier.Price != request.ExpectedUnitPrice)
+            throw new ResourceConflictException("The ticket price has changed. Refresh availability before purchasing.");
+
+        var sold = await db.PricingTiers.Where(item => item.EventId == eventId)
+            .SumAsync(item => item.TicketsSold, cancellationToken);
+        if (eventInfo.TotalCapacity - sold < request.Quantity)
+            throw new ResourceConflictException("There are not enough tickets remaining for this event.");
+
         try
         {
             var rowsUpdated = await db.PricingTiers
@@ -131,17 +143,17 @@ public sealed class TicketPurchaseService(
             .SingleOrDefaultAsync(item => item.Id == eventId, cancellationToken)
             ?? throw new ResourceNotFoundException($"Event '{eventId}' was not found in ticket inventory.");
 
+        var sold = entity.PricingTiers.Sum(tier => tier.TicketsSold);
+        var remaining = entity.IsActive
+            ? Math.Max(0, entity.TotalCapacity - sold) : 0;
         var tiers = entity.PricingTiers.OrderBy(tier => tier.Price)
             .Select(tier => new TierAvailabilityResponse(
                 tier.Id, tier.Name, tier.Price, tier.Capacity, tier.TicketsSold,
-                tier.IsActive ? Math.Max(0, tier.Capacity - tier.TicketsSold) : 0,
+                tier.IsActive ? Math.Min(remaining, Math.Max(0, tier.Capacity - tier.TicketsSold)) : 0,
                 tier.IsActive))
             .ToList();
-        var totalCapacity = tiers.Sum(tier => tier.IsActive ? tier.Capacity : tier.TicketsSold);
-        var sold = tiers.Sum(tier => tier.TicketsSold);
-
         return new AvailabilityResponse(entity.Id, entity.Name, entity.StartsAtUtc,
-            totalCapacity, sold, Math.Max(0, totalCapacity - sold), entity.IsActive, tiers);
+            entity.TotalCapacity, sold, Math.Min(remaining, tiers.Sum(tier => tier.Available)), entity.IsActive, tiers);
     }
 
     public async Task<IReadOnlyList<InventorySummaryResponse>> GetInventorySummariesAsync(
@@ -152,9 +164,10 @@ public sealed class TicketPurchaseService(
             .Select(entity => new
             {
                 EventId = entity.Id,
-                TotalCapacity = entity.PricingTiers.Sum(tier =>
-                    tier.IsActive ? tier.Capacity : tier.TicketsSold),
+                entity.TotalCapacity,
                 TicketsSold = entity.PricingTiers.Sum(tier => tier.TicketsSold),
+                TierAvailable = entity.PricingTiers.Sum(tier => tier.IsActive
+                    ? Math.Max(0, tier.Capacity - tier.TicketsSold) : 0),
                 entity.IsActive
             })
             .ToListAsync(cancellationToken);
@@ -163,7 +176,8 @@ public sealed class TicketPurchaseService(
                 summary.EventId,
                 summary.TotalCapacity,
                 summary.TicketsSold,
-                Math.Max(0, summary.TotalCapacity - summary.TicketsSold),
+                summary.IsActive ? Math.Min(summary.TierAvailable,
+                    Math.Max(0, summary.TotalCapacity - summary.TicketsSold)) : 0,
                 summary.IsActive))
             .ToList();
     }
@@ -199,6 +213,7 @@ public sealed class TicketPurchaseService(
         if (existing.EventId != eventId ||
             existing.PricingTierId != request.PricingTierId ||
             existing.Quantity != request.Quantity ||
+            existing.UnitPrice != request.ExpectedUnitPrice ||
             !string.Equals(existing.BuyerSubject, buyerSubject, StringComparison.Ordinal) ||
             !string.Equals(existing.CustomerEmail, normalizedEmail, StringComparison.OrdinalIgnoreCase))
         {

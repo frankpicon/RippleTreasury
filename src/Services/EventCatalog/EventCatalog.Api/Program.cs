@@ -7,7 +7,7 @@ using MassTransit;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.EntityFrameworkCore;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = WebApplication.CreateBuilder(args.Where(arg => arg != "--migrate").ToArray());
 builder.AddPlatformDefaults("Event Catalog API");
 
 builder.Services.AddControllers();
@@ -52,7 +52,7 @@ builder.Services.AddMassTransit(registration =>
 });
 
 var app = builder.Build();
-await app.EnsureDatabaseAsync<EventCatalogDbContext>();
+if (await app.InitializeDatabaseAsync<EventCatalogDbContext>(args)) return;
 app.UsePlatformDefaults();
 app.MapControllers();
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
