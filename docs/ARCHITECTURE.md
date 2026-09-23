@@ -60,7 +60,7 @@ sequenceDiagram
     participant RT as Realtime API
     participant UI as Other browsers
 
-    Client->>Client: Create key once; disable duplicate submit
+    Client->>Client: Create key once and disable duplicate submit
     Client->>API: POST purchase + stable idempotency key
     API->>DB: Conditional inventory UPDATE
     DB-->>API: One row updated
